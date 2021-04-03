@@ -8,9 +8,13 @@ import { GridFS } from './external/GridFS';
 export type ChallengeServiceContext = {
   user: {
     data: {
+      id: string;
+      createdAt: string;
+      updatedAt: string;
       username: string;
       email: string;
-      alias: string;
+      alias: null | string;
+      hasNsfwAllowed: boolean;
     };
   } | null;
   models: typeof models;
