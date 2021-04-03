@@ -22,3 +22,10 @@ export class SchemaFixParseError extends Error {
     );
   }
 }
+
+export class DatabaseNotConnectedError extends Error {
+  name = 'DatabaseNotConnectedError';
+  constructor(instance: string) {
+    super(`Database "${instance}" not initialized`);
+  }
+}

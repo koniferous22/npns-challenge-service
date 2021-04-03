@@ -2,6 +2,7 @@
 // import { Tedis } from 'tedis';
 import { Config } from './config';
 import { models } from './entities';
+import { GridFS } from './external/GridFS';
 // import { ChallengeViewService } from './external/challenge-cache';
 
 export type ChallengeServiceContext = {
@@ -14,4 +15,5 @@ export type ChallengeServiceContext = {
   } | null;
   models: typeof models;
   config: Config;
+  gridFileSystem: GridFS;
 };

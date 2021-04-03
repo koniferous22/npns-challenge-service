@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { buildFederatedSchema } from '@apollo/federation';
-import { ApolloServer } from 'apollo-server';
+import { ApolloServer } from 'apollo-server-express';
+import express from 'express';
 // import { addResolversToSchema } from 'apollo-graphql';
 import gql from 'graphql-tag';
 import { buildSchema, createResolversMap } from 'type-graphql';
@@ -8,6 +9,7 @@ import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { specifiedDirectives } from 'graphql';
 import { ObjectId } from 'mongodb';
 import mongoose from 'mongoose';
+import { graphqlUploadExpress } from 'graphql-upload';
 // eslint-disable-next-line import/no-named-as-default
 import federationDirectives from '@apollo/federation/dist/directives';
 import { ChallengeServiceContext } from './context';
@@ -20,6 +22,7 @@ import { buildMongooseConnectionString } from './utils/buildMongooseConnectionSt
 import { ObjectIdScalar } from './scalars/ObjectId';
 import { ChallengeResolver } from './resolvers/Challenge';
 import { models } from './entities';
+import { GridFS } from './external/GridFS';
 
 const federationFieldDirectivesFixes: Parameters<
   typeof fixFieldSchemaDirectives
@@ -55,6 +58,14 @@ const bootstrap = async () => {
   //     __resolveReference: resolveChallengeReference
   //   }
   // });
+  const app = express();
+  app.use(
+    graphqlUploadExpress({
+      maxFileSize: 10000000,
+      maxFiles: 10
+    })
+  );
+  const gridFileSystem = new GridFS();
   const server = new ApolloServer({
     schema,
     context: ({ req }) => {
@@ -62,13 +73,18 @@ const bootstrap = async () => {
       return {
         user: userFromRequest ? JSON.parse(userFromRequest) : null,
         config: Config.getInstance(),
-        models
+        models,
+        gridFileSystem
       } as ChallengeServiceContext;
-    }
+    },
+    uploads: false
   });
+  server.applyMiddleware({ app });
   server.setGraphQLPath(graphqlPath);
-  server.listen({ port }).then(({ url }) => {
-    console.log(`🚀 Challenge service ready at ${url}`);
+  app.listen(port, () => {
+    console.log(
+      `🚀 Challenge service ready at http://localhost:${port}${graphqlPath}`
+    );
   });
 };
 
