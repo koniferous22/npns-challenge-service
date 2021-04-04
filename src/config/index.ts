@@ -52,6 +52,23 @@ const configWithParser = {
           overridenValue: null as null | string
         }
       }
+    },
+    gridFs: {
+      type: 'node' as const,
+      children: {
+        maxFiles: {
+          type: 'leaf' as const,
+          originalValue: process.env.GRID_FS_MAX_FILES,
+          transform: getNumber,
+          overridenValue: null as null | string
+        },
+        maxFileSize: {
+          type: 'leaf' as const,
+          originalValue: process.env.GRID_FS_MAX_FILE_SIZE,
+          transform: getNumber,
+          overridenValue: null as null | string
+        }
+      }
     }
   }
 };

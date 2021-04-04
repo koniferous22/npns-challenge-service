@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { buildFederatedSchema } from '@apollo/federation';
 import { ApolloServer } from 'apollo-server-express';
 import express from 'express';
-// import { addResolversToSchema } from 'apollo-graphql';
+import { addResolversToSchema } from 'apollo-graphql';
 import gql from 'graphql-tag';
 import { buildSchema, createResolversMap } from 'type-graphql';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
@@ -16,13 +16,14 @@ import { ChallengeServiceContext } from './context';
 import { Config } from './config';
 // TODO reimplement Redis logic
 // import { ChallengeViewCache } from './external/challenge-cache';
-// import { resolveChallengeReference } from './references/Challenge';
+import { resolveChallengeReference } from './references/Challenge';
 import { fixFieldSchemaDirectives } from './utils/fixFieldDirectives';
 import { buildMongooseConnectionString } from './utils/buildMongooseConnectionString';
 import { ObjectIdScalar } from './scalars/ObjectId';
 import { ChallengeResolver } from './resolvers/Challenge';
 import { models } from './entities';
 import { GridFS } from './external/GridFS';
+import { TypegooseConvertor } from './middleware/Typegoose';
 
 const federationFieldDirectivesFixes: Parameters<
   typeof fixFieldSchemaDirectives
@@ -32,13 +33,15 @@ const bootstrap = async () => {
   const {
     port,
     graphqlPath,
+    gridFs,
     mongoose: mongooseConfig
   } = Config.getInstance().getConfig();
   await mongoose.connect(buildMongooseConnectionString(mongooseConfig));
   const typeGraphQLSchema = await buildSchema({
     resolvers: [ChallengeResolver],
     directives: [...specifiedDirectives, ...federationDirectives],
-    scalarsMap: [{ type: ObjectId, scalar: ObjectIdScalar }]
+    scalarsMap: [{ type: ObjectId, scalar: ObjectIdScalar }],
+    globalMiddlewares: [TypegooseConvertor]
   });
 
   const schema = buildFederatedSchema({
@@ -52,19 +55,13 @@ const bootstrap = async () => {
     resolvers: createResolversMap(typeGraphQLSchema) as any
   });
 
-  // TODO uncomment when implemented
-  // addResolversToSchema(schema, {
-  //   Challenge: {
-  //     __resolveReference: resolveChallengeReference
-  //   }
-  // });
+  addResolversToSchema(schema, {
+    Challenge: {
+      __resolveReference: resolveChallengeReference
+    }
+  });
   const app = express();
-  app.use(
-    graphqlUploadExpress({
-      maxFileSize: 10000000,
-      maxFiles: 10
-    })
-  );
+  app.use(graphqlUploadExpress(gridFs));
   const gridFileSystem = new GridFS();
   const server = new ApolloServer({
     schema,

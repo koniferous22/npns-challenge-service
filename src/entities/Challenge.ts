@@ -8,9 +8,25 @@ export class Challenge {
   @Property()
   @Field(() => ID)
   id!: ObjectId;
-  @Property()
+
+  // TODO if sharded db is implemented, tag should be the shard key
+  @Property({
+    index: true
+  })
   @Field()
-  title!: string;
+  tag!: string;
+
+  @Property({
+    index: true
+  })
+  @Field()
+  views!: number;
+
+  @Property({
+    index: true
+  })
+  @Field()
+  boost!: number;
 }
 
 export const ChallengeModel = getModelForClass(Challenge);
