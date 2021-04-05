@@ -47,8 +47,8 @@ export class ChallengeResolver {
     if (input.shouldPrioritizeBoostedChallenges) {
       prioritizedChallenges = await challengeModel
         .find({
-          boost: { $gt: 0, $lte: input.after.boost ?? undefined },
-          id: { $gt: input.after.id },
+          boost: { $gt: 0, $lte: input.afterCursorBoost ?? undefined },
+          id: { $gt: input.afterCursorId },
           tag: { $in: input.tags }
         })
         .sort({
@@ -62,8 +62,8 @@ export class ChallengeResolver {
     ) {
       standardChallenges = await challengeModel
         .find({
-          views: { $lte: input.after.views },
-          id: { $gt: input.after.id },
+          views: { $lte: input.afterCursorViews },
+          id: { $gt: input.afterCursorId },
           tag: { $in: input.tags }
         })
         .sort({
@@ -128,6 +128,10 @@ export class ChallengeResolver {
     };
     return plainToClass(ChallengeConnection, { edges, pageInfo });
   }
+
+  // @Mutation()
+  // async postChallenge(
+  // )
 
   // TODO Auth decorator should go here
   @Mutation(() => GraphQLString)

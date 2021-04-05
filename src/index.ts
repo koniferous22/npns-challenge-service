@@ -27,7 +27,13 @@ import { TypegooseConvertor } from './middleware/Typegoose';
 
 const federationFieldDirectivesFixes: Parameters<
   typeof fixFieldSchemaDirectives
->[1] = [];
+>[1] = [
+  {
+    objectTypeName: 'User',
+    fieldDefinitionName: 'id',
+    directiveName: 'external'
+  }
+];
 
 const bootstrap = async () => {
   const {

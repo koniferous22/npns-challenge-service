@@ -69,6 +69,23 @@ const configWithParser = {
           overridenValue: null as null | string
         }
       }
+    },
+    limits: {
+      type: 'node' as const,
+      children: {
+        contentUploads: {
+          type: 'leaf' as const,
+          originalValue: process.env.LIMIT_CONTENT_UPLOADS,
+          transform: getNumber,
+          overridenValue: null as null | string
+        },
+        editCount: {
+          type: 'leaf' as const,
+          originalValue: process.env.LIMIT_EDIT_COUNT,
+          transform: getNumber,
+          overridenValue: null as null | string
+        }
+      }
     }
   }
 };

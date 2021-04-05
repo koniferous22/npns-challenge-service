@@ -1,24 +1,12 @@
 import { ObjectId } from 'bson';
-import { Type } from 'class-transformer';
 import { IsNotEmpty, IsPositive, IsString } from 'class-validator';
-import { InputType, Field } from 'type-graphql';
+import { GraphQLString } from 'graphql';
+import { InputType, Field, Int } from 'type-graphql';
 import { ObjectIdScalar } from '../scalars/ObjectId';
 
 @InputType()
-export class ChallengesByTagsCursorInput {
-  @Field(() => ObjectIdScalar)
-  id!: ObjectId;
-
-  @Field()
-  boost!: number;
-
-  @Field()
-  views!: number;
-}
-
-@InputType()
 export class ChallengesByTagsInput {
-  @Field()
+  @Field(() => [GraphQLString])
   @IsNotEmpty({
     each: true
   })
@@ -27,13 +15,18 @@ export class ChallengesByTagsInput {
   })
   tags!: string[];
 
-  @Field()
+  @Field(() => Int)
   @IsPositive()
   first!: number;
 
-  @Type(() => ChallengesByTagsCursorInput)
-  @Field(() => ChallengesByTagsInput)
-  after!: ChallengesByTagsCursorInput;
+  @Field(() => ObjectIdScalar)
+  afterCursorId!: ObjectId;
+
+  @Field()
+  afterCursorBoost!: number;
+
+  @Field(() => Int)
+  afterCursorViews!: number;
 
   @Field()
   shouldPrioritizeBoostedChallenges!: boolean;
