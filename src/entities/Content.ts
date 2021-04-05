@@ -2,14 +2,14 @@ import {
   modelOptions as ModelOptions,
   prop as Property
 } from '@typegoose/typegoose';
-import { createUnionType, Field } from 'type-graphql';
+import { createUnionType, Field, ObjectType } from 'type-graphql';
 
 @ModelOptions({
   schemaOptions: {
     discriminatorKey: 'type'
   }
 })
-export class Content {
+export class BaseContent {
   @Field()
   @Property({
     default: Date.now()
@@ -17,27 +17,34 @@ export class Content {
   createdAt: Date = new Date();
 }
 
-export class TextContent extends Content {
+@ObjectType()
+export class TextContent extends BaseContent {
   @Field()
   @Property()
-  description!: string;
+  textContent!: string;
 }
 
-export class FileContent extends Content {
+@ObjectType()
+export class UploadedContent extends BaseContent {
   @Field()
   @Property()
-  cdnUrl!: string;
+  filename!: string;
+
+  // TODO define mimetype enum
+  @Field()
+  @Property()
+  mimetype!: string;
 }
 
 export const ContentUnionType = createUnionType({
   name: 'Content',
-  types: () => [TextContent, FileContent] as const,
+  types: () => [TextContent, UploadedContent] as const,
   resolveType: (value) => {
-    if ('description' in value) {
+    if ('textContent' in value) {
       return TextContent;
     }
-    if ('cdnUrl' in value) {
-      return FileContent;
+    if ('filename' in value) {
+      return UploadedContent;
     }
     return undefined;
   }

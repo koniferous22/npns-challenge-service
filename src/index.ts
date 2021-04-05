@@ -24,6 +24,8 @@ import { ChallengeResolver } from './resolvers/Challenge';
 import { models } from './entities';
 import { GridFS } from './external/GridFS';
 import { TypegooseConvertor } from './middleware/Typegoose';
+import { authChecker } from './authChecker';
+import { TextContent, UploadedContent } from './entities/Content';
 
 const federationFieldDirectivesFixes: Parameters<
   typeof fixFieldSchemaDirectives
@@ -47,7 +49,9 @@ const bootstrap = async () => {
     resolvers: [ChallengeResolver],
     directives: [...specifiedDirectives, ...federationDirectives],
     scalarsMap: [{ type: ObjectId, scalar: ObjectIdScalar }],
-    globalMiddlewares: [TypegooseConvertor]
+    globalMiddlewares: [TypegooseConvertor],
+    authChecker,
+    orphanedTypes: [TextContent, UploadedContent]
   });
 
   const schema = buildFederatedSchema({

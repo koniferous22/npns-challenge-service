@@ -1,27 +1,235 @@
-import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Authorized, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 import { ObjectId } from 'mongodb';
 import { GraphQLString } from 'graphql';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { plainToClass } from 'class-transformer';
 import { Document } from 'mongoose';
+import { DocumentType, getName } from '@typegoose/typegoose';
 import { ChallengeServiceContext } from '../context';
 import { Challenge } from '../entities/Challenge';
 import { ObjectIdScalar } from '../scalars/ObjectId';
-import { ChallengeConnection } from '../utils/payloads';
-import { ChallengesByTagsInput } from '../utils/inputs';
+import {
+  AddTextContentToChallengeEditPayload,
+  AddTextContentToChallengePayload,
+  AddTextContentToReplyEditPayload,
+  AddTextContentToReplyPayload,
+  AddTextContentToSubmissionEditPayload,
+  AddTextContentToSubmissionPayload,
+  AddUploadedContentToChallengeEditPayload,
+  AddUploadedContentToChallengePayload,
+  AddUploadedContentToReplyEditPayload,
+  AddUploadedContentToReplyPayload,
+  AddUploadedContentToSubmissionEditPayload,
+  AddUploadedContentToSubmissionPayload,
+  ChallengeConnection,
+  PostChallengeEditPayload,
+  PostChallengePayload,
+  PostReplyEditPayload,
+  PostReplyPayload,
+  PostSubmissionEditPayload,
+  PostSubmissionPayload
+} from '../utils/payloads';
+import {
+  AddTextContentToChallengeContract,
+  AddTextContentToChallengeEditContract,
+  AddTextContentToReplyContract,
+  AddTextContentToReplyEditContract,
+  AddTextContentToSubmissionContract,
+  AddTextContentToSubmissionEditContract,
+  AddUploadedContentToChallengeContract,
+  AddUploadedContentToChallengeEditContract,
+  AddUploadedContentToReplyContract,
+  AddUploadedContentToReplyEditContract,
+  AddUploadedContentToSubmissionContract,
+  AddUploadedContentToSubmissionEditContract,
+  ChallengesByTagsInput,
+  PostChallengeContract,
+  PostChallengeEditContract,
+  PostReplyContract,
+  PostReplyEditContract,
+  PostSubmissionContract,
+  PostSubmissionEditContract
+} from '../utils/inputs';
 import { convertMongoDocument } from '../utils/convertMongoDocument';
+import {
+  ChallengeNotFoundError,
+  EditNotFoundError,
+  InvalidContentTypeError,
+  SubmissionNotFoundError,
+  SubmittingOnOwnChallenge
+} from '../utils/exceptions';
+import { Reply } from '../entities/Reply';
+import { Submission } from '../entities/Submission';
+import { Edit } from '../entities/Edit';
+import { TextContent, UploadedContent } from '../entities/Content';
+
+type ConfigLookupArgs =
+  | {
+      type: 'challenge';
+      args: {
+        challengeId: ObjectId;
+      };
+      result: Challenge;
+    }
+  | {
+      type: 'submission';
+      args: {
+        challengeId: ObjectId;
+        submissionId: ObjectId;
+      };
+      result: Submission;
+    }
+  | {
+      type: 'reply';
+      args: {
+        challengeId: ObjectId;
+        submissionId: ObjectId;
+        replyId: ObjectId;
+      };
+      result: Reply;
+    }
+  | {
+      type: 'challengeEdit';
+      args: {
+        challengeId: ObjectId;
+        editId: ObjectId;
+      };
+      result: Edit;
+    }
+  | {
+      type: 'submissionEdit';
+      args: {
+        challengeId: ObjectId;
+        submissionId: ObjectId;
+        editId: ObjectId;
+      };
+      result: Edit;
+    }
+  | {
+      type: 'replyEdit';
+      args: {
+        challengeId: ObjectId;
+        submissionId: ObjectId;
+        replyId: ObjectId;
+        editId: ObjectId;
+      };
+      result: Edit;
+    };
 
 @Resolver(() => Challenge)
 export class ChallengeResolver {
+  // TODO it's possible to fix generic inferring by using single object instead of 2 args
+  private async getContent<T extends ConfigLookupArgs['type']>(
+    type: T,
+    args: Extract<ConfigLookupArgs, { type: T }>['args'],
+    challengeModel: ChallengeServiceContext['models']['Challenge']
+  ): Promise<{
+    challenge: DocumentType<Challenge>;
+    content: DocumentType<Extract<ConfigLookupArgs, { type: T }>['result']>;
+  }> {
+    const challenge = await challengeModel.findById(args.challengeId);
+    if (!challenge) {
+      throw new ChallengeNotFoundError(args.challengeId);
+    }
+    if (type === 'challenge') {
+      return {
+        challenge,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        content: challenge as any
+      };
+    }
+    if (type === 'challengeEdit') {
+      // @ts-expect-error didn't manage to find proper mongoose type :(
+      const edit = challenge.edits.id(args.editId);
+      if (!edit) {
+        throw new EditNotFoundError(
+          // @ts-expect-error TODO note
+          args.editId,
+          args.challengeId,
+          // @ts-expect-error TODO note
+          args.submissionId
+        );
+      }
+      return {
+        challenge,
+        content: edit
+      };
+    }
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const submission = challenge.submissions.id(args.submissionId);
+    if (!submission) {
+      // @ts-expect-error TODO note
+      throw new SubmissionNotFoundError(challenge.id, args.submissionId);
+    }
+    if (type === 'submission') {
+      return {
+        challenge,
+        content: submission
+      };
+    }
+    if (type === 'submissionEdit') {
+      // @ts-expect-error didn't manage to find proper mongoose type :(
+      const edit = submission.edits.id(args.editId);
+      if (!edit) {
+        throw new EditNotFoundError(
+          // @ts-expect-error TODO fix bad generic infering
+          args.editId,
+          args.challengeId,
+          // @ts-expect-error TODO fix bad generic infering
+          args.submissionId
+        );
+      }
+      return {
+        challenge,
+        content: edit
+      };
+    }
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const reply = submission.replies.id(args.replyId);
+    if (!reply) {
+      // @ts-expect-error TODO note
+      throw new ReplyNotFoundError(
+        args.challengeId,
+        // @ts-expect-error TODO fix bad generic infering
+        args.submissionId,
+        // @ts-expect-error TODO fix bad generic infering
+        args.replyId
+      );
+    }
+    if (type === 'reply') {
+      return {
+        challenge,
+        content: reply
+      };
+    }
+    if (type === 'replyEdit') {
+      // @ts-expect-error didn't manage to find proper mongoose type :(
+      const edit = reply.edits.id(args.editId);
+      if (!edit) {
+        throw new EditNotFoundError(
+          // @ts-expect-error TODO fix bad generic infering
+          args.editId,
+          args.challengeId,
+          // @ts-expect-error TODO fix bad generic infering
+          args.submissionId,
+          // @ts-expect-error TODO fix bad generic infering
+          args.replyId
+        );
+      }
+      return {
+        challenge,
+        content: edit
+      };
+    }
+    throw new InvalidContentTypeError(type);
+  }
+
   @Query(() => GraphQLString)
   challengeById(
     @Arg('id', () => ObjectIdScalar) id: ObjectId,
     @Ctx() ctx: ChallengeServiceContext
   ) {
     // TODO challenge view cache goes here
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const response = ctx.models.Challenge.findById(id);
-    return 'Not yet implemented';
+    return ctx.models.Challenge.findById(id);
   }
 
   @Query(() => ChallengeConnection)
@@ -62,7 +270,7 @@ export class ChallengeResolver {
     ) {
       standardChallenges = await challengeModel
         .find({
-          views: { $lte: input.afterCursorViews },
+          views: { $lte: input.afterCursorViews ?? undefined },
           id: { $gt: input.afterCursorId },
           tag: { $in: input.tags }
         })
@@ -129,16 +337,470 @@ export class ChallengeResolver {
     return plainToClass(ChallengeConnection, { edges, pageInfo });
   }
 
-  // @Mutation()
-  // async postChallenge(
-  // )
-
-  // TODO Auth decorator should go here
-  @Mutation(() => GraphQLString)
-  async uploadContent(
-    @Arg('file', () => GraphQLUpload) file: Promise<FileUpload>,
+  @Authorized()
+  @Mutation(() => PostChallengePayload)
+  async postChallenge(
+    @Arg('input', () => PostChallengeContract) input: PostChallengeContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    return ctx.gridFileSystem.fileUpload(file);
+    // TODO double check authorization
+    const newChallenge = new ctx.models.Challenge({
+      tag: input.tag,
+      posterId: ctx.user?.data.id
+    });
+    await newChallenge.save();
+    return plainToClass(PostChallengePayload, {
+      message: `Challenge posted: "${newChallenge.id}"`,
+      postedChallengeId: newChallenge.id
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PostSubmissionPayload)
+  async postSubmission(
+    @Arg('input', () => PostSubmissionContract) input: PostSubmissionContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge } = await this.getContent(
+      'challenge',
+      input,
+      ctx.models.Challenge
+    );
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const posterId = ctx.user!.data.id;
+    if (posterId === challenge.poster.id) {
+      throw new SubmittingOnOwnChallenge(posterId, challenge.id);
+    }
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const newSubmission = challenge.submissions.create({
+      posterId
+    });
+    challenge.submissions.push(newSubmission);
+    await challenge.save();
+    return plainToClass(PostSubmissionPayload, {
+      message: `Submission posted: "${newSubmission.id}"`,
+      postedChallengeId: newSubmission.id
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PostReplyPayload)
+  async postReply(
+    @Arg('input', () => PostReplyContract) input: PostReplyContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge, content: submission } = await this.getContent(
+      'submission',
+      input,
+      ctx.models.Challenge
+    );
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const newReply = submission.replies.create({
+      posterId: ctx.user?.data.id
+    });
+    submission.replies.push(newReply);
+    await challenge.save();
+    return plainToClass(PostReplyPayload, {
+      message: `Reply posted: "${newReply.id}"`,
+      postedChallengeId: newReply.id
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PostChallengeEditPayload)
+  async postChallengeEdit(
+    @Arg('input', () => PostChallengeEditContract)
+    input: PostChallengeEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge } = await this.getContent(
+      'challenge',
+      input,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const newEdit = challenge.edits.create({
+      posterId: ctx.user?.data.id
+    });
+    challenge.edits.push(newEdit);
+    await challenge.save();
+    return plainToClass(PostChallengeEditPayload, {
+      message: `Edit posted: "${newEdit.id}"`,
+      postedEditId: newEdit.id
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PostSubmissionEditPayload)
+  async postSubmissionEdit(
+    @Arg('input', () => PostSubmissionEditContract)
+    input: PostSubmissionEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: submission } = await this.getContent(
+      'submission',
+      input,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const newEdit = submission.edits.create({
+      posterId: ctx.user?.data.id
+    });
+    submission.edits.push(newEdit);
+    await challenge.save();
+    return plainToClass(PostSubmissionEditPayload, {
+      message: `Edit posted: "${newEdit.id}"`,
+      postedEditId: newEdit.id
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PostReplyEditPayload)
+  async postReplyEdit(
+    @Arg('input', () => PostReplyEditContract)
+    input: PostReplyEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: reply } = await this.getContent(
+      'reply',
+      input,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const newEdit = reply.edits.create({
+      posterId: ctx.user?.data.id
+    });
+    reply.edits.push(newEdit);
+    await challenge.save();
+    return plainToClass(PostReplyEditPayload, {
+      message: `Edit posted: "${newEdit.id}"`,
+      postedEditId: newEdit.id
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddTextContentToChallengePayload)
+  async addTextContentToChallenge(
+    @Arg('input', () => AddTextContentToChallengeContract)
+    { textContent, ...identifiers }: AddTextContentToChallengeContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge } = await this.getContent(
+      'challenge',
+      identifiers,
+      ctx.models.Challenge
+    );
+    const content = {
+      type: getName(TextContent),
+      createdAt: new Date(),
+      textContent
+    };
+    challenge.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddTextContentToChallengePayload, {
+      message: `Text content uploaded for "${challenge.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddTextContentToSubmissionPayload)
+  async addTextContentToSubmission(
+    @Arg('input', () => AddTextContentToSubmissionContract)
+    { textContent, ...identifiers }: AddTextContentToSubmissionContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: submission } = await this.getContent(
+      'submission',
+      identifiers,
+      ctx.models.Challenge
+    );
+    const content = {
+      type: getName(TextContent),
+      createdAt: new Date(),
+      textContent
+    };
+    submission.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddTextContentToSubmissionPayload, {
+      message: `Text content uploaded for "${submission.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddTextContentToReplyPayload)
+  async addTextContentToReply(
+    @Arg('input', () => AddTextContentToReplyContract)
+    { textContent, ...identifiers }: AddTextContentToReplyContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge, content: reply } = await this.getContent(
+      'reply',
+      identifiers,
+      ctx.models.Challenge
+    );
+    const content = {
+      type: getName(TextContent),
+      createdAt: new Date(),
+      textContent
+    };
+    reply.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddTextContentToReplyPayload, {
+      message: `Text content uploaded for "${reply.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddTextContentToChallengeEditPayload)
+  async addTextContentToChallengeEdit(
+    @Arg('input', () => AddTextContentToChallengeEditContract)
+    { textContent, ...identifiers }: AddTextContentToChallengeEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: edit } = await this.getContent(
+      'challengeEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    const content = {
+      type: getName(TextContent),
+      createdAt: new Date(),
+      textContent
+    };
+    edit.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddTextContentToChallengeEditPayload, {
+      message: `Text content uploaded for "${edit.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddTextContentToSubmissionEditPayload)
+  async addTextContentToSubmissionEdit(
+    @Arg('input', () => AddTextContentToSubmissionEditContract)
+    { textContent, ...identifiers }: AddTextContentToSubmissionEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: edit } = await this.getContent(
+      'submissionEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    const content = {
+      type: getName(TextContent),
+      createdAt: new Date(),
+      textContent
+    };
+    edit.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddTextContentToSubmissionEditPayload, {
+      message: `Text content uploaded for "${edit.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddTextContentToReplyEditPayload)
+  async addTextContentToReplyEdit(
+    @Arg('input', () => AddTextContentToReplyEditContract)
+    { textContent, ...identifiers }: AddTextContentToReplyEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: edit } = await this.getContent(
+      'replyEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    const content = {
+      type: getName(TextContent),
+      createdAt: new Date(),
+      textContent
+    };
+    edit.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddTextContentToReplyEditPayload, {
+      message: `Text content uploaded for "${edit.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddUploadedContentToChallengePayload)
+  async addUploadedContentToChallenge(
+    @Arg('input', () => AddUploadedContentToChallengeContract)
+    { upload, ...identifiers }: AddUploadedContentToChallengeContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge } = await this.getContent(
+      'challenge',
+      identifiers,
+      ctx.models.Challenge
+    );
+    const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
+    const content = {
+      type: getName(UploadedContent),
+      createdAt: new Date(),
+      filename,
+      mimetype
+    };
+    challenge.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddUploadedContentToChallengePayload, {
+      message: `Text content uploaded for "${challenge.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddUploadedContentToSubmissionPayload)
+  async addUploadedContentToSubmission(
+    @Arg('input', () => AddUploadedContentToSubmissionContract)
+    { upload, ...identifiers }: AddUploadedContentToSubmissionContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: submission } = await this.getContent(
+      'submission',
+      identifiers,
+      ctx.models.Challenge
+    );
+    const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
+    const content = {
+      type: getName(UploadedContent),
+      createdAt: new Date(),
+      filename,
+      mimetype
+    };
+    submission.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddUploadedContentToSubmissionPayload, {
+      message: `Text content uploaded for "${submission.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddUploadedContentToReplyPayload)
+  async addUploadedContentToReply(
+    @Arg('input', () => AddUploadedContentToReplyContract)
+    { upload, ...identifiers }: AddUploadedContentToReplyContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge, content: reply } = await this.getContent(
+      'reply',
+      identifiers,
+      ctx.models.Challenge
+    );
+    const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
+    const content = {
+      type: getName(UploadedContent),
+      createdAt: new Date(),
+      filename,
+      mimetype
+    };
+    reply.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddUploadedContentToReplyPayload, {
+      message: `Text content uploaded for "${reply.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddUploadedContentToChallengeEditPayload)
+  async addUploadedContentToChallengeEdit(
+    @Arg('input', () => AddUploadedContentToChallengeEditContract)
+    { upload, ...identifiers }: AddUploadedContentToChallengeEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: edit } = await this.getContent(
+      'challengeEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
+    const content = {
+      type: getName(UploadedContent),
+      createdAt: new Date(),
+      filename,
+      mimetype
+    };
+    edit.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddUploadedContentToChallengeEditPayload, {
+      message: `Text content uploaded for "${edit.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddUploadedContentToSubmissionEditPayload)
+  async addUploadedContentToSubmissionEdit(
+    @Arg('input', () => AddUploadedContentToSubmissionEditContract)
+    { upload, ...identifiers }: AddUploadedContentToSubmissionEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: edit } = await this.getContent(
+      'submissionEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
+    const content = {
+      type: getName(UploadedContent),
+      createdAt: new Date(),
+      filename,
+      mimetype
+    };
+    edit.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddUploadedContentToSubmissionEditPayload, {
+      message: `Text content uploaded for "${edit.id}"`,
+      content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => AddUploadedContentToReplyEditPayload)
+  async addUploadedContentToReplyEdit(
+    @Arg('input', () => AddUploadedContentToReplyEditContract)
+    { upload, ...identifiers }: AddUploadedContentToReplyEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, content: edit } = await this.getContent(
+      'replyEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
+    const content = {
+      type: getName(UploadedContent),
+      createdAt: new Date(),
+      filename,
+      mimetype
+    };
+    edit.content.push(content as any);
+    await challenge.save();
+    return plainToClass(AddUploadedContentToReplyEditPayload, {
+      message: `Text content uploaded for "${edit.id}"`,
+      content
+    });
   }
 }

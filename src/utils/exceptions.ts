@@ -1,3 +1,6 @@
+import { ObjectId } from 'bson';
+import { formatContentIds } from './formatContentIds';
+
 export class ComposedConfigError extends Error {
   name = 'ComposedConfigError';
   constructor(public errors: string[]) {
@@ -58,6 +61,74 @@ export class ScalarSerializeError extends Error {
   constructor(scalarName: string, allowedValues: string[]) {
     super(
       `"${scalarName}" can only serialize ${allowedValues.join(', ')} values`
+    );
+  }
+}
+
+export class ChallengeNotFoundError extends Error {
+  name = 'ChallengeNotFoundError';
+  constructor(challengeId: ObjectId) {
+    super(`No content found with ${formatContentIds(challengeId)}`);
+  }
+}
+
+export class SubmissionNotFoundError extends Error {
+  name = 'SubmissionNotFoundError';
+  constructor(challengeId: ObjectId, submissionId: ObjectId) {
+    super(
+      `No content found with ${formatContentIds(challengeId, submissionId)}`
+    );
+  }
+}
+
+export class ReplyNotFoundError extends Error {
+  name = 'ReplyNotFoundError';
+  constructor(
+    challengeId: ObjectId,
+    submissionId: ObjectId,
+    replyId: ObjectId
+  ) {
+    super(
+      `No content found with ${formatContentIds(
+        challengeId,
+        submissionId,
+        replyId
+      )}`
+    );
+  }
+}
+
+export class EditNotFoundError extends Error {
+  name = 'EditNotFoundError';
+  constructor(
+    editId: ObjectId,
+    challengeId: ObjectId,
+    submissionId?: ObjectId,
+    replyId?: ObjectId
+  ) {
+    super(
+      `No content found with ${formatContentIds(
+        challengeId,
+        submissionId,
+        replyId,
+        editId
+      )}`
+    );
+  }
+}
+
+export class InvalidContentTypeError extends Error {
+  name = 'InvalidContentType';
+  constructor(contentType: string) {
+    super(`Searching for invalid content type "${contentType}"`);
+  }
+}
+
+export class SubmittingOnOwnChallenge extends Error {
+  name = 'SubmittingOnOwnChallenge';
+  constructor(userId: string, challengeId: ObjectId) {
+    super(
+      `User "${userId}" posting submission on own challenge "${challengeId}"`
     );
   }
 }

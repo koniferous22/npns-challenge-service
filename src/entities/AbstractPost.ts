@@ -1,7 +1,12 @@
 import { prop as Property } from '@typegoose/typegoose';
 import { ObjectId } from 'mongodb';
 import { Field, ID, ObjectType } from 'type-graphql';
-import { Content, TextContent, FileContent } from './Content';
+import {
+  BaseContent,
+  TextContent,
+  UploadedContent,
+  ContentUnionType
+} from './Content';
 import { User } from './User';
 import { Config } from '../config';
 
@@ -11,7 +16,8 @@ export abstract class AbstractPost {
     return Config.getInstance().getConfig().limits.contentUploads;
   }
 
-  @Property()
+  // NOTE probably not necessary because of typegoose
+  // @Property()
   @Field(() => ID)
   id!: ObjectId;
 
@@ -22,22 +28,28 @@ export abstract class AbstractPost {
       },
       message: `Only ${AbstractPost.getMaxUploads()} are allowed per challenge`
     },
-    type: () => [Content],
-    discriminators: () => [TextContent, FileContent]
+    type: () => [BaseContent],
+    discriminators: () => [TextContent, UploadedContent]
   })
-  content!: Content[];
+  @Field(() => [ContentUnionType])
+  content!: BaseContent[];
 
   @Property({
-    type: () => User
+    type: () => User,
+    required: true
   })
   @Field(() => User)
-  posterId!: User;
+  poster!: User;
 
   @Property({
     default: Date.now()
   })
+  @Field()
   createdAt: Date = new Date();
 
+  @Property({
+    default: true
+  })
   @Field()
   isActive!: boolean;
 }

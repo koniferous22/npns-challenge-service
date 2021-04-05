@@ -1,8 +1,9 @@
 import { prop as Property, getModelForClass } from '@typegoose/typegoose';
 import { ObjectId } from 'mongodb';
+import { Document } from 'mongoose';
 import { Directive, Field, ID, ObjectType } from 'type-graphql';
 import { AbstractPost } from './AbstractPost';
-import { Content, FileContent, TextContent } from './Content';
+import { BaseContent, UploadedContent, TextContent } from './Content';
 import { Edit } from './Edit';
 import { Submission } from './Submission';
 
@@ -17,36 +18,30 @@ export class Challenge extends AbstractPost {
   tag!: string;
 
   @Property({
-    index: true
+    index: true,
+    default: 0
   })
   @Field()
   views!: number;
 
   @Property({
-    index: true
+    index: true,
+    default: 0
   })
   @Field()
   boost!: number;
 
-  @Property()
+  @Property({
+    default: ''
+  })
   @Field()
   title!: string;
 
   @Property()
-  @Field(() => ID)
-  acceptedSubmission!: ObjectId;
-
-  @Property({
-    validate: {
-      validator: (v) => {
-        return Array.isArray(v) && v.length <= Challenge.getMaxUploads();
-      },
-      message: `Only ${Challenge.getMaxUploads()} are allowed per challenge`
-    },
-    type: () => [Content],
-    discriminators: () => [TextContent, FileContent]
+  @Field(() => ID, {
+    nullable: true
   })
-  content!: Content[];
+  acceptedSubmission!: ObjectId | undefined;
 
   @Property({
     type: () => Submission
