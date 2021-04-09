@@ -26,7 +26,9 @@ import {
   PostReplyEditPayload,
   PostReplyPayload,
   PostSubmissionEditPayload,
-  PostSubmissionPayload
+  PostSubmissionPayload,
+  PublishPostPayload,
+  RemoveContentPayload
 } from '../utils/payloads';
 import {
   AddTextContentToChallengeContract,
@@ -47,11 +49,24 @@ import {
   PostReplyContract,
   PostReplyEditContract,
   PostSubmissionContract,
-  PostSubmissionEditContract
+  PostSubmissionEditContract,
+  PublishChallengeContract,
+  PublishChallengeEditContract,
+  PublishReplyContract,
+  PublishReplyEditContract,
+  PublishSubmissionContract,
+  PublishSubmissionEditContract,
+  RemoveContentFromChallengeContract,
+  RemoveContentFromChallengeEditContract,
+  RemoveContentFromReplyContract,
+  RemoveContentFromReplyEditContract,
+  RemoveContentFromSubmissionContract,
+  RemoveContentFromSubmissionEditContract
 } from '../utils/inputs';
 import { convertMongoDocument } from '../utils/convertMongoDocument';
 import {
   ChallengeNotFoundError,
+  ContentNotFoundError,
   EditNotFoundError,
   InvalidContentTypeError,
   SubmissionNotFoundError,
@@ -124,7 +139,7 @@ export class ChallengeResolver {
     challengeModel: ChallengeServiceContext['models']['Challenge']
   ): Promise<{
     challenge: DocumentType<Challenge>;
-    content: DocumentType<Extract<ConfigLookupArgs, { type: T }>['result']>;
+    post: DocumentType<Extract<ConfigLookupArgs, { type: T }>['result']>;
   }> {
     const challenge = await challengeModel.findById(args.challengeId);
     if (!challenge) {
@@ -134,7 +149,7 @@ export class ChallengeResolver {
       return {
         challenge,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        content: challenge as any
+        post: challenge as any
       };
     }
     if (type === 'challengeEdit') {
@@ -151,7 +166,7 @@ export class ChallengeResolver {
       }
       return {
         challenge,
-        content: edit
+        post: edit
       };
     }
     // @ts-expect-error didn't manage to find proper mongoose type :(
@@ -163,7 +178,7 @@ export class ChallengeResolver {
     if (type === 'submission') {
       return {
         challenge,
-        content: submission
+        post: submission
       };
     }
     if (type === 'submissionEdit') {
@@ -180,7 +195,7 @@ export class ChallengeResolver {
       }
       return {
         challenge,
-        content: edit
+        post: edit
       };
     }
     // @ts-expect-error didn't manage to find proper mongoose type :(
@@ -198,7 +213,7 @@ export class ChallengeResolver {
     if (type === 'reply') {
       return {
         challenge,
-        content: reply
+        post: reply
       };
     }
     if (type === 'replyEdit') {
@@ -217,7 +232,7 @@ export class ChallengeResolver {
       }
       return {
         challenge,
-        content: edit
+        post: edit
       };
     }
     throw new InvalidContentTypeError(type);
@@ -379,7 +394,7 @@ export class ChallengeResolver {
     await challenge.save();
     return plainToClass(PostSubmissionPayload, {
       message: `Submission posted: "${newSubmission.id}"`,
-      postedChallengeId: newSubmission.id
+      postedSubmissionId: newSubmission.id
     });
   }
 
@@ -390,7 +405,7 @@ export class ChallengeResolver {
     @Ctx() ctx: ChallengeServiceContext
   ) {
     // TODO double check authorization
-    const { challenge, content: submission } = await this.getContent(
+    const { challenge, post: submission } = await this.getContent(
       'submission',
       input,
       ctx.models.Challenge
@@ -403,7 +418,7 @@ export class ChallengeResolver {
     await challenge.save();
     return plainToClass(PostReplyPayload, {
       message: `Reply posted: "${newReply.id}"`,
-      postedChallengeId: newReply.id
+      postedReplyId: newReply.id
     });
   }
 
@@ -439,7 +454,7 @@ export class ChallengeResolver {
     input: PostSubmissionEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: submission } = await this.getContent(
+    const { challenge, post: submission } = await this.getContent(
       'submission',
       input,
       ctx.models.Challenge
@@ -464,7 +479,7 @@ export class ChallengeResolver {
     input: PostReplyEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: reply } = await this.getContent(
+    const { challenge, post: reply } = await this.getContent(
       'reply',
       input,
       ctx.models.Challenge
@@ -495,15 +510,16 @@ export class ChallengeResolver {
       identifiers,
       ctx.models.Challenge
     );
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = challenge.content.create({
       type: getName(TextContent),
       createdAt: new Date(),
       textContent
-    };
-    challenge.content.push(content as any);
+    });
+    challenge.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddTextContentToChallengePayload, {
-      message: `Text content uploaded for "${challenge.id}"`,
+      message: `Text content uploaded for challenge "${challenge.id}"`,
       content
     });
   }
@@ -515,20 +531,21 @@ export class ChallengeResolver {
     { textContent, ...identifiers }: AddTextContentToSubmissionContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: submission } = await this.getContent(
+    const { challenge, post: submission } = await this.getContent(
       'submission',
       identifiers,
       ctx.models.Challenge
     );
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = submission.content.create({
       type: getName(TextContent),
       createdAt: new Date(),
       textContent
-    };
-    submission.content.push(content as any);
+    });
+    submission.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddTextContentToSubmissionPayload, {
-      message: `Text content uploaded for "${submission.id}"`,
+      message: `Text content uploaded for submission "${submission.id}"`,
       content
     });
   }
@@ -541,20 +558,21 @@ export class ChallengeResolver {
     @Ctx() ctx: ChallengeServiceContext
   ) {
     // TODO double check authorization
-    const { challenge, content: reply } = await this.getContent(
+    const { challenge, post: reply } = await this.getContent(
       'reply',
       identifiers,
       ctx.models.Challenge
     );
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = reply.content.create({
       type: getName(TextContent),
       createdAt: new Date(),
       textContent
-    };
-    reply.content.push(content as any);
+    });
+    reply.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddTextContentToReplyPayload, {
-      message: `Text content uploaded for "${reply.id}"`,
+      message: `Text content uploaded for reply "${reply.id}"`,
       content
     });
   }
@@ -566,21 +584,22 @@ export class ChallengeResolver {
     { textContent, ...identifiers }: AddTextContentToChallengeEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: edit } = await this.getContent(
+    const { challenge, post: edit } = await this.getContent(
       'challengeEdit',
       identifiers,
       ctx.models.Challenge
     );
     // TODO double check authorization
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.create({
       type: getName(TextContent),
       createdAt: new Date(),
       textContent
-    };
-    edit.content.push(content as any);
+    });
+    edit.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddTextContentToChallengeEditPayload, {
-      message: `Text content uploaded for "${edit.id}"`,
+      message: `Text content uploaded for challenge edit "${edit.id}"`,
       content
     });
   }
@@ -592,21 +611,22 @@ export class ChallengeResolver {
     { textContent, ...identifiers }: AddTextContentToSubmissionEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: edit } = await this.getContent(
+    const { challenge, post: edit } = await this.getContent(
       'submissionEdit',
       identifiers,
       ctx.models.Challenge
     );
     // TODO double check authorization
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.create({
       type: getName(TextContent),
       createdAt: new Date(),
       textContent
-    };
-    edit.content.push(content as any);
+    });
+    edit.content.push(content);
     await challenge.save();
     return plainToClass(AddTextContentToSubmissionEditPayload, {
-      message: `Text content uploaded for "${edit.id}"`,
+      message: `Text content uploaded for submission edit"${edit.id}"`,
       content
     });
   }
@@ -618,21 +638,22 @@ export class ChallengeResolver {
     { textContent, ...identifiers }: AddTextContentToReplyEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: edit } = await this.getContent(
+    const { challenge, post: edit } = await this.getContent(
       'replyEdit',
       identifiers,
       ctx.models.Challenge
     );
     // TODO double check authorization
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.create({
       type: getName(TextContent),
       createdAt: new Date(),
       textContent
-    };
-    edit.content.push(content as any);
+    });
+    edit.content.push(content);
     await challenge.save();
     return plainToClass(AddTextContentToReplyEditPayload, {
-      message: `Text content uploaded for "${edit.id}"`,
+      message: `Text content uploaded for reply edit "${edit.id}"`,
       content
     });
   }
@@ -651,16 +672,17 @@ export class ChallengeResolver {
       ctx.models.Challenge
     );
     const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = challenge.content.create({
       type: getName(UploadedContent),
       createdAt: new Date(),
       filename,
       mimetype
-    };
-    challenge.content.push(content as any);
+    });
+    challenge.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddUploadedContentToChallengePayload, {
-      message: `Text content uploaded for "${challenge.id}"`,
+      message: `File content uploaded for challenge "${challenge.id}"`,
       content
     });
   }
@@ -672,22 +694,23 @@ export class ChallengeResolver {
     { upload, ...identifiers }: AddUploadedContentToSubmissionContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: submission } = await this.getContent(
+    const { challenge, post: submission } = await this.getContent(
       'submission',
       identifiers,
       ctx.models.Challenge
     );
     const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = submission.content.create({
       type: getName(UploadedContent),
       createdAt: new Date(),
       filename,
       mimetype
-    };
-    submission.content.push(content as any);
+    });
+    submission.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddUploadedContentToSubmissionPayload, {
-      message: `Text content uploaded for "${submission.id}"`,
+      message: `File content uploaded for submission "${submission.id}"`,
       content
     });
   }
@@ -700,22 +723,23 @@ export class ChallengeResolver {
     @Ctx() ctx: ChallengeServiceContext
   ) {
     // TODO double check authorization
-    const { challenge, content: reply } = await this.getContent(
+    const { challenge, post: reply } = await this.getContent(
       'reply',
       identifiers,
       ctx.models.Challenge
     );
     const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = reply.content.create({
       type: getName(UploadedContent),
       createdAt: new Date(),
       filename,
       mimetype
-    };
-    reply.content.push(content as any);
+    });
+    reply.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddUploadedContentToReplyPayload, {
-      message: `Text content uploaded for "${reply.id}"`,
+      message: `File content uploaded for reply "${reply.id}"`,
       content
     });
   }
@@ -727,23 +751,24 @@ export class ChallengeResolver {
     { upload, ...identifiers }: AddUploadedContentToChallengeEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: edit } = await this.getContent(
+    const { challenge, post: edit } = await this.getContent(
       'challengeEdit',
       identifiers,
       ctx.models.Challenge
     );
     // TODO double check authorization
     const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.create({
       type: getName(UploadedContent),
       createdAt: new Date(),
       filename,
       mimetype
-    };
-    edit.content.push(content as any);
+    });
+    edit.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddUploadedContentToChallengeEditPayload, {
-      message: `Text content uploaded for "${edit.id}"`,
+      message: `File content uploaded for challenge edit "${edit.id}"`,
       content
     });
   }
@@ -755,23 +780,24 @@ export class ChallengeResolver {
     { upload, ...identifiers }: AddUploadedContentToSubmissionEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: edit } = await this.getContent(
+    const { challenge, post: edit } = await this.getContent(
       'submissionEdit',
       identifiers,
       ctx.models.Challenge
     );
     // TODO double check authorization
     const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.create({
       type: getName(UploadedContent),
       createdAt: new Date(),
       filename,
       mimetype
-    };
-    edit.content.push(content as any);
+    });
+    edit.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddUploadedContentToSubmissionEditPayload, {
-      message: `Text content uploaded for "${edit.id}"`,
+      message: `File content uploaded for challenge edit "${edit.id}"`,
       content
     });
   }
@@ -783,24 +809,337 @@ export class ChallengeResolver {
     { upload, ...identifiers }: AddUploadedContentToReplyEditContract,
     @Ctx() ctx: ChallengeServiceContext
   ) {
-    const { challenge, content: edit } = await this.getContent(
+    const { challenge, post: edit } = await this.getContent(
       'replyEdit',
       identifiers,
       ctx.models.Challenge
     );
     // TODO double check authorization
     const { filename, mimetype } = await ctx.gridFileSystem.fileUpload(upload);
-    const content = {
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.create({
       type: getName(UploadedContent),
       createdAt: new Date(),
       filename,
       mimetype
-    };
-    edit.content.push(content as any);
+    });
+    edit.content.push((content as unknown) as UploadedContent);
     await challenge.save();
     return plainToClass(AddUploadedContentToReplyEditPayload, {
-      message: `Text content uploaded for "${edit.id}"`,
+      message: `File content uploaded for reply edit "${edit.id}"`,
       content
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => RemoveContentPayload)
+  async removeContentFromChallenge(
+    @Arg('input', () => RemoveContentFromChallengeContract)
+    { contentId, ...identifiers }: RemoveContentFromChallengeContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge } = await this.getContent(
+      'challenge',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = challenge.content.id(contentId);
+    if (!content) {
+      throw new ContentNotFoundError(contentId, identifiers.challengeId);
+    }
+    content.isActive = false;
+
+    await challenge.save();
+    return plainToClass(RemoveContentPayload, {
+      message: `Content "${content._id}" removed from challenge "${challenge.id}"`
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => RemoveContentPayload)
+  async removeContentFromSubmission(
+    @Arg('input', () => RemoveContentFromSubmissionContract)
+    { contentId, ...identifiers }: RemoveContentFromSubmissionContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: submission } = await this.getContent(
+      'submission',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = submission.content.id(contentId);
+    if (!content) {
+      throw new ContentNotFoundError(
+        contentId,
+        identifiers.challengeId,
+        identifiers.submissionId
+      );
+    }
+    content.isActive = false;
+
+    await challenge.save();
+    return plainToClass(RemoveContentPayload, {
+      message: `Content "${content._id}" removed from submission "${submission.id}"`
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => RemoveContentPayload)
+  async removeContentFromReply(
+    @Arg('input', () => RemoveContentFromReplyContract)
+    { contentId, ...identifiers }: RemoveContentFromReplyContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge, post: reply } = await this.getContent(
+      'reply',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = reply.content.id(contentId);
+    if (!content) {
+      throw new ContentNotFoundError(
+        contentId,
+        identifiers.challengeId,
+        identifiers.submissionId,
+        identifiers.replyId
+      );
+    }
+    content.isActive = false;
+
+    await challenge.save();
+    return plainToClass(RemoveContentPayload, {
+      message: `Content "${content._id}" removed from reply "${reply.id}"`
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => RemoveContentPayload)
+  async removeContentFromChallengeEdit(
+    @Arg('input', () => RemoveContentFromChallengeEditContract)
+    { contentId, ...identifiers }: RemoveContentFromChallengeEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: edit } = await this.getContent(
+      'challengeEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.id(contentId);
+    if (!content) {
+      throw new ContentNotFoundError(
+        contentId,
+        identifiers.challengeId,
+        undefined,
+        undefined,
+        identifiers.editId
+      );
+    }
+    content.isActive = false;
+
+    await challenge.save();
+    return plainToClass(RemoveContentPayload, {
+      message: `Content "${content._id}" removed from challenge edit "${edit.id}"`
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => RemoveContentPayload)
+  async removeContentFromSubmissionEdit(
+    @Arg('input', () => RemoveContentFromSubmissionEditContract)
+    { contentId, ...identifiers }: RemoveContentFromSubmissionEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: edit } = await this.getContent(
+      'submissionEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.id(contentId);
+    if (!content) {
+      throw new ContentNotFoundError(
+        contentId,
+        identifiers.challengeId,
+        identifiers.submissionId,
+        undefined,
+        identifiers.editId
+      );
+    }
+    content.isActive = false;
+
+    await challenge.save();
+    return plainToClass(RemoveContentPayload, {
+      message: `Content "${content._id}" removed from submission edit "${edit.id}"`
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => RemoveContentPayload)
+  async removeContentFromReplyEdit(
+    @Arg('input', () => RemoveContentFromReplyEditContract)
+    { contentId, ...identifiers }: RemoveContentFromReplyEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: edit } = await this.getContent(
+      'replyEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    // @ts-expect-error didn't manage to find proper mongoose type :(
+    const content = edit.content.id(contentId);
+    if (!content) {
+      throw new ContentNotFoundError(
+        contentId,
+        identifiers.challengeId,
+        identifiers.submissionId,
+        identifiers.replyId,
+        identifiers.editId
+      );
+    }
+    content.isActive = false;
+
+    await challenge.save();
+    return plainToClass(RemoveContentPayload, {
+      message: `Content "${content._id}" removed from reply edit "${edit.id}"`
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PublishPostPayload)
+  async publishChallenge(
+    @Arg('input', () => PublishChallengeContract)
+    identifiers: PublishChallengeContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge } = await this.getContent(
+      'challenge',
+      identifiers,
+      ctx.models.Challenge
+    );
+    challenge.isActive = true;
+
+    await challenge.save();
+    return plainToClass(PublishPostPayload, {
+      message: `Challenge "${challenge.id}" published`,
+      challenge
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PublishPostPayload)
+  async publishSubmission(
+    @Arg('input', () => PublishSubmissionContract)
+    identifiers: PublishSubmissionContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: submission } = await this.getContent(
+      'submission',
+      identifiers,
+      ctx.models.Challenge
+    );
+    submission.isActive = true;
+
+    await challenge.save();
+    return plainToClass(PublishPostPayload, {
+      message: `Submission "${submission.id}" published`,
+      challenge
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PublishPostPayload)
+  async publishReply(
+    @Arg('input', () => PublishReplyContract)
+    identifiers: PublishReplyContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    // TODO double check authorization
+    const { challenge, post: reply } = await this.getContent(
+      'reply',
+      identifiers,
+      ctx.models.Challenge
+    );
+    reply.isActive = true;
+    await challenge.save();
+    return plainToClass(PublishPostPayload, {
+      message: `Reply "${reply.id}" published`,
+      challenge
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PublishPostPayload)
+  async publishChallengeEdit(
+    @Arg('input', () => PublishChallengeEditContract)
+    identifiers: PublishChallengeEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: edit } = await this.getContent(
+      'challengeEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    edit.isActive = true;
+
+    await challenge.save();
+    return plainToClass(PublishPostPayload, {
+      message: `Challenge edidt "${edit.id}" publisehd`,
+      challenge
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PublishPostPayload)
+  async publishSubmissionEdit(
+    @Arg('input', () => PublishSubmissionEditContract)
+    identifiers: PublishSubmissionEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: edit } = await this.getContent(
+      'submissionEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    edit.isActive = true;
+
+    await challenge.save();
+    return plainToClass(PublishPostPayload, {
+      message: `Submission edit "${edit.id}" published`,
+      challenge
+    });
+  }
+
+  @Authorized()
+  @Mutation(() => PublishPostPayload)
+  async publishReplyEdit(
+    @Arg('input', () => PublishReplyEditContract)
+    identifiers: PublishReplyEditContract,
+    @Ctx() ctx: ChallengeServiceContext
+  ) {
+    const { challenge, post: edit } = await this.getContent(
+      'replyEdit',
+      identifiers,
+      ctx.models.Challenge
+    );
+    // TODO double check authorization
+    edit.isActive = true;
+
+    await challenge.save();
+    return plainToClass(PublishPostPayload, {
+      message: `Reply edit "${edit.id}" published`,
+      challenge
     });
   }
 }

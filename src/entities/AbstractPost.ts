@@ -48,7 +48,7 @@ export abstract class AbstractPost {
   createdAt: Date = new Date();
 
   @Property({
-    default: true
+    default: false
   })
   @Field()
   isActive!: boolean;

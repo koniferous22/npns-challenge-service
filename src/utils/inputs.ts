@@ -307,3 +307,177 @@ export class AddUploadedContentToReplyEditContract {
   @Field(() => GraphQLUpload)
   upload!: Promise<FileUpload>;
 }
+
+@InputType()
+export class RemoveContentFromChallengeContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  contentId!: ObjectId;
+}
+
+@InputType()
+export class RemoveContentFromSubmissionContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  contentId!: ObjectId;
+}
+
+@InputType()
+export class RemoveContentFromReplyContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  replyId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  contentId!: ObjectId;
+}
+
+@InputType()
+export class RemoveContentFromChallengeEditContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  editId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  contentId!: ObjectId;
+}
+
+@InputType()
+export class RemoveContentFromSubmissionEditContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  editId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  contentId!: ObjectId;
+}
+
+@InputType()
+export class RemoveContentFromReplyEditContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  replyId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  editId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  contentId!: ObjectId;
+}
+
+@InputType()
+export class PublishChallengeContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+}
+
+@InputType()
+export class PublishSubmissionContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+}
+
+@InputType()
+export class PublishReplyContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  replyId!: ObjectId;
+}
+
+@InputType()
+export class PublishChallengeEditContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  editId!: ObjectId;
+}
+
+@InputType()
+export class PublishSubmissionEditContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  editId!: ObjectId;
+}
+
+@InputType()
+export class PublishReplyEditContract {
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  challengeId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  submissionId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  replyId!: ObjectId;
+
+  @Field(() => ObjectIdScalar)
+  @IsMongoId()
+  editId!: ObjectId;
+}

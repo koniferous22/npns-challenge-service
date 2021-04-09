@@ -117,6 +117,27 @@ export class EditNotFoundError extends Error {
   }
 }
 
+export class ContentNotFoundError extends Error {
+  name = 'ContentNotFoundError';
+  constructor(
+    contentId: ObjectId,
+    challengeId: ObjectId,
+    submissionId?: ObjectId,
+    replyId?: ObjectId,
+    editId?: ObjectId
+  ) {
+    super(
+      `No content found with ${formatContentIds(
+        challengeId,
+        submissionId,
+        replyId,
+        editId,
+        contentId
+      )}`
+    );
+  }
+}
+
 export class InvalidContentTypeError extends Error {
   name = 'InvalidContentType';
   constructor(contentType: string) {

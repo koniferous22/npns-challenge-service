@@ -1,9 +1,7 @@
 import { prop as Property, getModelForClass } from '@typegoose/typegoose';
 import { ObjectId } from 'mongodb';
-import { Document } from 'mongoose';
 import { Directive, Field, ID, ObjectType } from 'type-graphql';
 import { AbstractPost } from './AbstractPost';
-import { BaseContent, UploadedContent, TextContent } from './Content';
 import { Edit } from './Edit';
 import { Submission } from './Submission';
 

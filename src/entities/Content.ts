@@ -2,7 +2,8 @@ import {
   modelOptions as ModelOptions,
   prop as Property
 } from '@typegoose/typegoose';
-import { createUnionType, Field, ObjectType } from 'type-graphql';
+import { ObjectId } from 'mongodb';
+import { createUnionType, Field, ID, ObjectType } from 'type-graphql';
 
 @ModelOptions({
   schemaOptions: {
@@ -10,11 +11,20 @@ import { createUnionType, Field, ObjectType } from 'type-graphql';
   }
 })
 export class BaseContent {
+  @Field(() => ID)
+  id!: ObjectId;
+
   @Field()
   @Property({
     default: Date.now()
   })
   createdAt: Date = new Date();
+
+  @Property({
+    default: true
+  })
+  @Field()
+  isActive!: boolean;
 }
 
 @ObjectType()

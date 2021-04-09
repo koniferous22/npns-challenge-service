@@ -219,3 +219,16 @@ export class AddUploadedContentToReplyEditPayload {
   @Field()
   createdAt!: Date;
 }
+
+@ObjectType({ implements: BasePayload })
+export class RemoveContentPayload {
+  message!: string;
+}
+
+@ObjectType({ implements: BasePayload })
+export class PublishPostPayload {
+  message!: string;
+
+  @Field()
+  challenge!: Challenge;
+}
