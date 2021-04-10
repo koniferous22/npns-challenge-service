@@ -27,28 +27,28 @@ const configWithParser = {
       children: {
         host: {
           type: 'leaf' as const,
-          originalValue: process.env.CHALLENGE_DB_HOST,
+          originalValue: process.env.CONTENT_DB_HOST,
           overridenValue: null as null | string
         },
         port: {
           type: 'leaf' as const,
-          originalValue: process.env.CHALLENGE_DB_PORT,
+          originalValue: process.env.CONTENT_DB_PORT,
           transform: getNumber,
           overridenValue: null as null | string
         },
         username: {
           type: 'leaf' as const,
-          originalValue: process.env.CHALLENGE_DB_USERNAME,
+          originalValue: process.env.CONTENT_DB_USERNAME,
           overridenValue: null as null | string
         },
         password: {
           type: 'leaf' as const,
-          originalValue: process.env.CHALLENGE_DB_PASSWORD,
+          originalValue: process.env.CONTENT_DB_PASSWORD,
           overridenValue: null as null | string
         },
         database: {
           type: 'leaf' as const,
-          originalValue: process.env.CHALLENGE_DB_DATABASE,
+          originalValue: process.env.CONTENT_DB_DATABASE,
           overridenValue: null as null | string
         }
       }

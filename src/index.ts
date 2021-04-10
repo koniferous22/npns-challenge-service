@@ -12,7 +12,7 @@ import mongoose from 'mongoose';
 import { graphqlUploadExpress } from 'graphql-upload';
 // eslint-disable-next-line import/no-named-as-default
 import federationDirectives from '@apollo/federation/dist/directives';
-import { ChallengeServiceContext } from './context';
+import { ContentServiceContext } from './context';
 import { Config } from './config';
 // TODO reimplement Redis logic
 // import { ChallengeViewCache } from './external/challenge-cache';
@@ -44,6 +44,7 @@ const bootstrap = async () => {
     gridFs,
     mongoose: mongooseConfig
   } = Config.getInstance().getConfig();
+  console.log(buildMongooseConnectionString(mongooseConfig));
   await mongoose.connect(buildMongooseConnectionString(mongooseConfig));
   const typeGraphQLSchema = await buildSchema({
     resolvers: [ChallengeResolver],
@@ -82,7 +83,7 @@ const bootstrap = async () => {
         config: Config.getInstance(),
         models,
         gridFileSystem
-      } as ChallengeServiceContext;
+      } as ContentServiceContext;
     },
     uploads: false
   });
@@ -90,7 +91,7 @@ const bootstrap = async () => {
   server.setGraphQLPath(graphqlPath);
   app.listen(port, () => {
     console.log(
-      `🚀 Challenge service ready at http://localhost:${port}${graphqlPath}`
+      `🚀 Content service ready at http://localhost:${port}${graphqlPath}`
     );
   });
 };

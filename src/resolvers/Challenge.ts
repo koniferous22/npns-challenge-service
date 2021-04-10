@@ -4,7 +4,7 @@ import { GraphQLString } from 'graphql';
 import { plainToClass } from 'class-transformer';
 import { Document } from 'mongoose';
 import { DocumentType, getName } from '@typegoose/typegoose';
-import { ChallengeServiceContext } from '../context';
+import { ContentServiceContext } from '../context';
 import { Challenge } from '../entities/Challenge';
 import { ObjectIdScalar } from '../scalars/ObjectId';
 import {
@@ -136,7 +136,7 @@ export class ChallengeResolver {
   private async getContent<T extends ConfigLookupArgs['type']>(
     type: T,
     args: Extract<ConfigLookupArgs, { type: T }>['args'],
-    challengeModel: ChallengeServiceContext['models']['Challenge']
+    challengeModel: ContentServiceContext['models']['Challenge']
   ): Promise<{
     challenge: DocumentType<Challenge>;
     post: DocumentType<Extract<ConfigLookupArgs, { type: T }>['result']>;
@@ -241,7 +241,7 @@ export class ChallengeResolver {
   @Query(() => GraphQLString)
   challengeById(
     @Arg('id', () => ObjectIdScalar) id: ObjectId,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO challenge view cache goes here
     return ctx.models.Challenge.findById(id);
@@ -250,7 +250,7 @@ export class ChallengeResolver {
   @Query(() => ChallengeConnection)
   async challengesByTags(
     @Arg('input') input: ChallengesByTagsInput,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO delete after proper testing
     // PSEUDOCODE
@@ -356,7 +356,7 @@ export class ChallengeResolver {
   @Mutation(() => PostChallengePayload)
   async postChallenge(
     @Arg('input', () => PostChallengeContract) input: PostChallengeContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const newChallenge = new ctx.models.Challenge({
@@ -374,7 +374,7 @@ export class ChallengeResolver {
   @Mutation(() => PostSubmissionPayload)
   async postSubmission(
     @Arg('input', () => PostSubmissionContract) input: PostSubmissionContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge } = await this.getContent(
       'challenge',
@@ -402,7 +402,7 @@ export class ChallengeResolver {
   @Mutation(() => PostReplyPayload)
   async postReply(
     @Arg('input', () => PostReplyContract) input: PostReplyContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge, post: submission } = await this.getContent(
@@ -427,7 +427,7 @@ export class ChallengeResolver {
   async postChallengeEdit(
     @Arg('input', () => PostChallengeEditContract)
     input: PostChallengeEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge } = await this.getContent(
       'challenge',
@@ -452,7 +452,7 @@ export class ChallengeResolver {
   async postSubmissionEdit(
     @Arg('input', () => PostSubmissionEditContract)
     input: PostSubmissionEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: submission } = await this.getContent(
       'submission',
@@ -477,7 +477,7 @@ export class ChallengeResolver {
   async postReplyEdit(
     @Arg('input', () => PostReplyEditContract)
     input: PostReplyEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: reply } = await this.getContent(
       'reply',
@@ -502,7 +502,7 @@ export class ChallengeResolver {
   async addTextContentToChallenge(
     @Arg('input', () => AddTextContentToChallengeContract)
     { textContent, ...identifiers }: AddTextContentToChallengeContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge } = await this.getContent(
@@ -529,7 +529,7 @@ export class ChallengeResolver {
   async addTextContentToSubmission(
     @Arg('input', () => AddTextContentToSubmissionContract)
     { textContent, ...identifiers }: AddTextContentToSubmissionContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: submission } = await this.getContent(
       'submission',
@@ -555,7 +555,7 @@ export class ChallengeResolver {
   async addTextContentToReply(
     @Arg('input', () => AddTextContentToReplyContract)
     { textContent, ...identifiers }: AddTextContentToReplyContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge, post: reply } = await this.getContent(
@@ -582,7 +582,7 @@ export class ChallengeResolver {
   async addTextContentToChallengeEdit(
     @Arg('input', () => AddTextContentToChallengeEditContract)
     { textContent, ...identifiers }: AddTextContentToChallengeEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'challengeEdit',
@@ -609,7 +609,7 @@ export class ChallengeResolver {
   async addTextContentToSubmissionEdit(
     @Arg('input', () => AddTextContentToSubmissionEditContract)
     { textContent, ...identifiers }: AddTextContentToSubmissionEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'submissionEdit',
@@ -636,7 +636,7 @@ export class ChallengeResolver {
   async addTextContentToReplyEdit(
     @Arg('input', () => AddTextContentToReplyEditContract)
     { textContent, ...identifiers }: AddTextContentToReplyEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'replyEdit',
@@ -663,7 +663,7 @@ export class ChallengeResolver {
   async addUploadedContentToChallenge(
     @Arg('input', () => AddUploadedContentToChallengeContract)
     { upload, ...identifiers }: AddUploadedContentToChallengeContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge } = await this.getContent(
@@ -692,7 +692,7 @@ export class ChallengeResolver {
   async addUploadedContentToSubmission(
     @Arg('input', () => AddUploadedContentToSubmissionContract)
     { upload, ...identifiers }: AddUploadedContentToSubmissionContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: submission } = await this.getContent(
       'submission',
@@ -720,7 +720,7 @@ export class ChallengeResolver {
   async addUploadedContentToReply(
     @Arg('input', () => AddUploadedContentToReplyContract)
     { upload, ...identifiers }: AddUploadedContentToReplyContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge, post: reply } = await this.getContent(
@@ -749,7 +749,7 @@ export class ChallengeResolver {
   async addUploadedContentToChallengeEdit(
     @Arg('input', () => AddUploadedContentToChallengeEditContract)
     { upload, ...identifiers }: AddUploadedContentToChallengeEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'challengeEdit',
@@ -778,7 +778,7 @@ export class ChallengeResolver {
   async addUploadedContentToSubmissionEdit(
     @Arg('input', () => AddUploadedContentToSubmissionEditContract)
     { upload, ...identifiers }: AddUploadedContentToSubmissionEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'submissionEdit',
@@ -807,7 +807,7 @@ export class ChallengeResolver {
   async addUploadedContentToReplyEdit(
     @Arg('input', () => AddUploadedContentToReplyEditContract)
     { upload, ...identifiers }: AddUploadedContentToReplyEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'replyEdit',
@@ -836,7 +836,7 @@ export class ChallengeResolver {
   async removeContentFromChallenge(
     @Arg('input', () => RemoveContentFromChallengeContract)
     { contentId, ...identifiers }: RemoveContentFromChallengeContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge } = await this.getContent(
@@ -862,7 +862,7 @@ export class ChallengeResolver {
   async removeContentFromSubmission(
     @Arg('input', () => RemoveContentFromSubmissionContract)
     { contentId, ...identifiers }: RemoveContentFromSubmissionContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: submission } = await this.getContent(
       'submission',
@@ -891,7 +891,7 @@ export class ChallengeResolver {
   async removeContentFromReply(
     @Arg('input', () => RemoveContentFromReplyContract)
     { contentId, ...identifiers }: RemoveContentFromReplyContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge, post: reply } = await this.getContent(
@@ -922,7 +922,7 @@ export class ChallengeResolver {
   async removeContentFromChallengeEdit(
     @Arg('input', () => RemoveContentFromChallengeEditContract)
     { contentId, ...identifiers }: RemoveContentFromChallengeEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'challengeEdit',
@@ -954,7 +954,7 @@ export class ChallengeResolver {
   async removeContentFromSubmissionEdit(
     @Arg('input', () => RemoveContentFromSubmissionEditContract)
     { contentId, ...identifiers }: RemoveContentFromSubmissionEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'submissionEdit',
@@ -986,7 +986,7 @@ export class ChallengeResolver {
   async removeContentFromReplyEdit(
     @Arg('input', () => RemoveContentFromReplyEditContract)
     { contentId, ...identifiers }: RemoveContentFromReplyEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'replyEdit',
@@ -1018,7 +1018,7 @@ export class ChallengeResolver {
   async publishChallenge(
     @Arg('input', () => PublishChallengeContract)
     identifiers: PublishChallengeContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge } = await this.getContent(
@@ -1040,7 +1040,7 @@ export class ChallengeResolver {
   async publishSubmission(
     @Arg('input', () => PublishSubmissionContract)
     identifiers: PublishSubmissionContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: submission } = await this.getContent(
       'submission',
@@ -1061,7 +1061,7 @@ export class ChallengeResolver {
   async publishReply(
     @Arg('input', () => PublishReplyContract)
     identifiers: PublishReplyContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     // TODO double check authorization
     const { challenge, post: reply } = await this.getContent(
@@ -1082,7 +1082,7 @@ export class ChallengeResolver {
   async publishChallengeEdit(
     @Arg('input', () => PublishChallengeEditContract)
     identifiers: PublishChallengeEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'challengeEdit',
@@ -1104,7 +1104,7 @@ export class ChallengeResolver {
   async publishSubmissionEdit(
     @Arg('input', () => PublishSubmissionEditContract)
     identifiers: PublishSubmissionEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'submissionEdit',
@@ -1126,7 +1126,7 @@ export class ChallengeResolver {
   async publishReplyEdit(
     @Arg('input', () => PublishReplyEditContract)
     identifiers: PublishReplyEditContract,
-    @Ctx() ctx: ChallengeServiceContext
+    @Ctx() ctx: ContentServiceContext
   ) {
     const { challenge, post: edit } = await this.getContent(
       'replyEdit',

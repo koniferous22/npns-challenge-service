@@ -5,7 +5,7 @@ import { models } from './entities';
 import { GridFS } from './external/GridFS';
 // import { ChallengeViewService } from './external/challenge-cache';
 
-export type ChallengeServiceContext = {
+export type ContentServiceContext = {
   user: {
     data: {
       id: string;

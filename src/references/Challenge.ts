@@ -1,10 +1,10 @@
-import { ChallengeServiceContext } from '../context';
+import { ContentServiceContext } from '../context';
 import { Challenge } from '../entities/Challenge';
 
 export const resolveChallengeReference = (
   challenge: Pick<Challenge, 'id'>,
   args: any,
-  ctx: ChallengeServiceContext
+  ctx: ContentServiceContext
 ) => {
   return ctx.models.Challenge.findById(challenge);
 };

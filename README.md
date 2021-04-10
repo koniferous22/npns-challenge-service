@@ -1,5 +1,5 @@
-# npns-challenge-service
-Challenge service for npns
+# npns-content-service
+Content service for npns
 
 ## TODO
 * Config options for file upload count and max size

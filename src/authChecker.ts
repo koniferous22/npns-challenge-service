@@ -1,7 +1,7 @@
 import { AuthChecker } from 'type-graphql';
-import { ChallengeServiceContext } from './context';
+import { ContentServiceContext } from './context';
 
-export const authChecker: AuthChecker<ChallengeServiceContext> = ({
+export const authChecker: AuthChecker<ContentServiceContext> = ({
   context
 }) => {
   return Boolean(context.user);
