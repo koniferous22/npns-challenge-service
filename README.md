@@ -1,6 +1,10 @@
 # DEPRECATED npns-content-service
 Content service for npns
+
 **All the functionality migrated to npns-challenge-service**
+
+(Reasons: I don't like mongo)
+
 ## TODO
 * Config options for file upload count and max size
 * Test whether failed file upload clears properly
